@@ -10,6 +10,14 @@ const RATE_LIMIT_DURATION = 1000 * 60 * 15; // 15 mins
 const INVALID_KEY_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 let lastNodeError: string = "None";
 
+// Model configuration - centralized for easy swapping
+const TEXT_MODEL = 'llama-3.3-70b-versatile';       // 70B params (default, fast)
+const TEXT_MODEL_LARGE = 'llama-3.1-405b-reasoning'; // 405B params (higher quality, slower)
+const VISION_MODEL = 'llama-3.2-90b-vision-preview'; // 90B params (upgraded from 11B)
+
+// Set to true to use the 405B model for all text completions
+const USE_LARGE_MODEL = true;
+
 /**
  * Robustly extracts API keys from the environment string.
  */
@@ -168,7 +176,7 @@ export const checkApiHealth = async (profile?: UserProfile): Promise<{healthy: b
   try {
     const groq = new Groq({ apiKey: key, dangerouslyAllowBrowser: true });
     await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: USE_LARGE_MODEL ? TEXT_MODEL_LARGE : TEXT_MODEL,
       messages: [{ role: 'user', content: 'ping' }],
       max_tokens: 1
     });
@@ -203,7 +211,8 @@ export const streamChatResponse = async (
     // Check if we have an image
     const lastMsg = history[history.length - 1];
     const hasImage = !!lastMsg?.imagePart;
-    const model = hasImage ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+    const textModel = USE_LARGE_MODEL ? TEXT_MODEL_LARGE : TEXT_MODEL;
+    const model = hasImage ? VISION_MODEL : textModel;
 
     const messages: any[] = [
       { role: 'system', content: getSystemInstruction(profile) },
